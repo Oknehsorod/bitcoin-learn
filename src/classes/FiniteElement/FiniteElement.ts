@@ -1,5 +1,6 @@
 import { checkPrimes } from '../../utils/checkPrimes';
 import { mod } from '../../utils/mod';
+import { expMod } from '../../utils/expMod';
 
 export class FiniteElement {
   private readonly prime: bigint;
@@ -49,8 +50,9 @@ export class FiniteElement {
   }
 
   static pow(a: FiniteElement, exponent: bigint): FiniteElement {
+    const exp = mod(exponent, a.getPrime() - 1n);
     return new FiniteElement(
-      mod(a.getValue() ** mod(exponent, a.getPrime() - 1n), a.getPrime()),
+      expMod(a.getValue(), exp, a.getPrime()),
       a.getPrime(),
     );
   }

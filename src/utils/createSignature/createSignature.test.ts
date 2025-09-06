@@ -3,6 +3,7 @@ import { EllipticPoint } from '../../classes/EllipticCurve';
 import { G } from '../constants';
 import { PublicKey } from '../../types/PublicKey';
 import { verifySignature } from '../verifySignature';
+import { getSecretKeyFromSignaturesWithSameK } from '../getSecretKeyFromSignaturesWithSameK';
 
 describe('Basic signature creation tests', () => {
   it('should return valid signatures', () => {
@@ -14,6 +15,7 @@ describe('Basic signature creation tests', () => {
     };
 
     const { r, s, z } = createSignature(e, 'Programming Bitcoin!', 1234567890n);
+    const sig2 = createSignature(e, 'Another Message', 1234567890n);
 
     expect(r.toString(16)).toBe(
       '2b698a0f0a4041b77e63488ad48c23e8e8838dd1fb7520408b121697b782ef22',
@@ -26,5 +28,7 @@ describe('Basic signature creation tests', () => {
     );
 
     expect(verifySignature(publicKey, { r, s, z })).toBe(true);
+
+    expect(getSecretKeyFromSignaturesWithSameK({ r, s, z }, sig2)).toBe(e);
   });
 });

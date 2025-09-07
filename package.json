@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "deno src/index.ts",
+    "start": "deno --sloppy-imports src/index.ts",
     "test": "jest",
     "format": "prettier --write src/**/*.ts"
   },

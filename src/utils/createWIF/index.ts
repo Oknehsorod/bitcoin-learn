@@ -1,0 +1,1 @@
+export { createWIF } from './createWIF';

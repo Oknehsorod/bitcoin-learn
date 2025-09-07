@@ -4,7 +4,7 @@ import {
 } from '../../types/BitcoinNetworks';
 import { hash256 } from '../hash256';
 import { encodeBase58 } from '../encodeBase58';
-import { toBytes } from '../bytesUtils';
+import { bigIntToBigEndianBytes } from '../bytesUtils';
 
 export const createWIF = (
   network: BitcoinNetworks,
@@ -12,7 +12,7 @@ export const createWIF = (
   isCompressedPublicKey: boolean,
 ): string => {
   const prefix = BITCOIN_NETWORK_TO_WIF_PREFIX[network];
-  const encodedKey = toBytes(secretKey);
+  const encodedKey = bigIntToBigEndianBytes(secretKey);
   const result = Buffer.concat([
     Buffer.from(prefix, 'hex'),
     encodedKey,

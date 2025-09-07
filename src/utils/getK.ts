@@ -1,6 +1,9 @@
 import { N } from './constants';
 import { createSHA256Hmac } from './createSHA256Hmac';
-import { toBytes, fromBytes } from './bytesUtils';
+import {
+  bigIntToBigEndianBytes,
+  fromBigEndianBytesToBigInt,
+} from './bytesUtils';
 
 export const getK = (z: bigint, e: bigint): bigint => {
   let k: Buffer = Buffer.alloc(32, 0x00),
@@ -8,8 +11,8 @@ export const getK = (z: bigint, e: bigint): bigint => {
 
   if (z > N) z -= N;
 
-  const zBytes = toBytes(z);
-  const secretBytes = toBytes(e);
+  const zBytes = bigIntToBigEndianBytes(z);
+  const secretBytes = bigIntToBigEndianBytes(e);
 
   k = createSHA256Hmac(k, [v, Buffer.from([0x00]), secretBytes, zBytes]);
   v = createSHA256Hmac(k, v);
@@ -18,7 +21,7 @@ export const getK = (z: bigint, e: bigint): bigint => {
 
   while (true) {
     v = createSHA256Hmac(k, v);
-    const candidate = fromBytes(v);
+    const candidate = fromBigEndianBytesToBigInt(v);
     if (candidate >= 1n && candidate < N) return candidate;
     k = createSHA256Hmac(k, Buffer.concat([v, Buffer.from([0x00])]));
     v = createSHA256Hmac(k, v);

@@ -4,17 +4,20 @@ import { FiniteElement } from '../classes/FiniteElement';
 import { SEVEN, P } from './constants';
 import { sqrtFromS256Field } from './sqrtFromS256Field';
 import { mod } from './mod';
+import { BufferReader } from '../classes/BufferReader';
 
 export const parseSECPublicKey = (secKey: string): PublicKey => {
-  const prefix = secKey.slice(0, 2);
+  const buf = new BufferReader(Buffer.from(secKey, 'hex'));
 
-  if (prefix === '04')
+  const prefix = buf.consumeFirstByte();
+
+  if (prefix === 0x04)
     return {
       x: BigInt('0x' + secKey.slice(2, 66)),
       y: BigInt('0x' + secKey.slice(66, 130)),
     };
 
-  const isEven = prefix === '02';
+  const isEven = prefix === 0x02;
   const x = createS256Field(BigInt('0x' + secKey.slice(2, 66)));
   const alpha = FiniteElement.add(FiniteElement.pow(x, 3n), SEVEN);
   const beta = sqrtFromS256Field(alpha.getValue());

@@ -1,41 +1,38 @@
 import { Signature } from '../types/Signature';
+import { BufferReader } from '../classes/BufferReader';
 
 export const parseDERSignature = (derSignature: string): Signature | null => {
-  let buf = Buffer.from(derSignature, 'hex');
+  let buf = new BufferReader(Buffer.from(derSignature, 'hex'));
 
-  const prefix = buf[0];
+  const prefix = buf.consumeFirstByte();
 
   if (prefix !== 0x30) return null;
-  buf = buf.subarray(1);
 
-  const signatureLength = buf[0];
-  buf = buf.subarray(1);
+  const signatureLength = buf.consumeFirstByte();
 
-  if (signatureLength !== buf.length) return null;
+  if (signatureLength !== buf.getBuffer().length) return null;
 
-  const rValueMarker = buf[0];
-  buf = buf.subarray(1);
+  const rValueMarker = buf.consumeFirstByte();
 
   if (rValueMarker !== 0x02) return null;
 
-  const rValueLength = buf[0];
-  buf = buf.subarray(1);
+  const rValueLength = buf.consumeFirstByte();
 
-  const rValue = BigInt('0x' + buf.subarray(0, rValueLength).toString('hex'));
-  buf = buf.subarray(rValueLength);
+  if (!rValueLength) return null;
 
-  const sValueMarker = buf[0];
-  buf = buf.subarray(1);
+  const rValue = BigInt('0x' + buf.consume(rValueLength).toString('hex'));
+
+  const sValueMarker = buf.consumeFirstByte();
 
   if (sValueMarker !== 0x02) return null;
 
-  const sValueLength = buf[0];
-  buf = buf.subarray(1);
+  const sValueLength = buf.consumeFirstByte();
 
-  const sValue = BigInt('0x' + buf.subarray(0, sValueLength).toString('hex'));
-  buf = buf.subarray(sValueLength);
+  if (!sValueLength) return null;
 
-  if (buf.length !== 0) return null;
+  const sValue = BigInt('0x' + buf.consume(sValueLength).toString('hex'));
+
+  if (buf.getBuffer().length !== 0) return null;
 
   return {
     r: rValue,

@@ -1,7 +1,7 @@
 import { BufferReader } from '../classes/BufferReader';
 
 export const readVarints = (buf: BufferReader): bigint | number => {
-  const i = buf.consume(1)[0];
+  const i = buf.consumeFirstByte();
 
   if (i === 0xfd) {
     return buf.consumeUInt16LE();

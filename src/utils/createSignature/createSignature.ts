@@ -8,11 +8,13 @@ import { mod } from '../mod';
 
 export const createSignature = (
   secret: bigint,
-  message: string,
+  message: string | Buffer,
   _k?: bigint,
 ): Signature => {
   const e = secret;
-  const z = hash256ToBigInt(Buffer.from(message));
+  const z = Buffer.isBuffer(message)
+    ? BigInt('0x' + message.toString('hex'))
+    : hash256ToBigInt(Buffer.from(message));
 
   const k = _k ?? getK(z, e);
 

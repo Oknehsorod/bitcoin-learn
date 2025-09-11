@@ -1,6 +1,6 @@
-import { Transaction } from '../types/Transaction';
-import { readVarints } from './varintsUtils';
-import { BufferReader } from '../classes/BufferReader';
+import { Transaction } from '../../types/Transaction';
+import { readVarints } from '../varintsUtils';
+import { BufferReader } from '../../classes/BufferReader';
 
 export const parseTransaction = (transaction: string): Transaction => {
   let buf = new BufferReader(Buffer.from(transaction, 'hex'));

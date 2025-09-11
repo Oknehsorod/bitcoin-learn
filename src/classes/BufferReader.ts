@@ -29,6 +29,12 @@ export class BufferReader {
     return this.consume(1)[0];
   }
 
+  public consumeUInt8(): number {
+    const value = this.currentSlice.readUInt8(0);
+    this.consume(1);
+    return value;
+  }
+
   public consumeUInt16LE(): number {
     const value = this.currentSlice.readUInt16LE(0);
     this.consume(2);

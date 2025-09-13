@@ -2,6 +2,7 @@ import { parseTransaction } from './parseTransaction';
 import { Transaction } from '../../types/Transaction';
 import { btcToSatoshi } from '../btcToSatoshi';
 import { serializeTransaction } from './serializeTransaction';
+import { verifyInput } from './verifyInput';
 
 describe('Basic transaction utils tests', () => {
   it('should parse and serialize correctly', () => {
@@ -34,5 +35,30 @@ describe('Basic transaction utils tests', () => {
     expect(tx).toEqual(correctTransaction);
 
     expect(serializeTransaction(tx).toString('hex')).toBe(input);
+  });
+
+  it('should verify inputs', () => {
+    const prevOutputScript = '010193010287';
+    const tx: Transaction = {
+      version: 1,
+      locktime: 0,
+      input: [
+        {
+          prevTxID:
+            '6e270841b2f2c93f2fec954ec920382dc7fe34a21b1398e0800eea83011c1fec',
+          prevIndex: 0,
+          scriptSig: '0101',
+          sequence: 4294967295,
+        },
+      ],
+      output: [
+        {
+          amount: btcToSatoshi(1),
+          pubKey: '00',
+        },
+      ],
+    };
+
+    expect(verifyInput(tx, 0, prevOutputScript)).toBe(true);
   });
 });

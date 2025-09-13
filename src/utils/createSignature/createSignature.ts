@@ -23,7 +23,11 @@ export const createSignature = (
   if (!r) throw new Error('Wrong EllipticPoint');
 
   const kInv = expMod(k, N - 2n, N);
-  const s = mod((z + r * e) * kInv, N);
+  let s = mod((z + r * e) * kInv, N);
+
+  if (s > N / 2n) {
+    s = N - s;
+  }
 
   return { z, r, s };
 };

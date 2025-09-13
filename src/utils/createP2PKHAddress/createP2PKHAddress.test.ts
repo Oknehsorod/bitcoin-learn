@@ -1,5 +1,5 @@
 import { BitcoinNetworks } from '../../types/BitcoinNetworks';
-import { createAddress } from './createAddress';
+import { createP2PKHAddress } from './createP2PKHAddress';
 import { getSECPublicKey } from '../getSECPublicKey';
 import { getPublicKey } from '../getPublicKey';
 
@@ -34,7 +34,7 @@ describe('Basic address creation tests', () => {
     ];
 
     secrets.forEach(({ network, isCompressed, secretKey }, idx) => {
-      const result = createAddress(
+      const result = createP2PKHAddress(
         network,
         getSECPublicKey(getPublicKey(secretKey), isCompressed),
       );

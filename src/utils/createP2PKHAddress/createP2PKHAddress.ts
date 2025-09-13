@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto';
 import { hash256 } from '../hash256';
 import { encodeBase58 } from '../encodeBase58';
 
-export const createAddress = (
+export const createP2PKHAddress = (
   network: BitcoinNetworks,
   secKey: string,
 ): string => {

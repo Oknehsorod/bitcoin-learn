@@ -3,6 +3,7 @@ export type TransactionInput = {
   previousTransactionOutputIndex: number;
   scriptSignature: Buffer;
   sequence: number;
+  witness: Buffer[];
 };
 
 export type TransactionOutput = {

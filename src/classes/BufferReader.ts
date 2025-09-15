@@ -47,6 +47,12 @@ export class BufferReader {
     return value;
   }
 
+  public consumeUInt32BE(): number {
+    const value = this.currentSlice.readUInt32BE(0);
+    this.consume(4);
+    return value;
+  }
+
   public consumeBigUInt64LE(): bigint {
     const value = this.currentSlice.readBigUInt64LE(0);
     this.consume(8);

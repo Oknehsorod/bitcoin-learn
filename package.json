@@ -5,7 +5,8 @@
   "scripts": {
     "start": "deno --sloppy-imports src/index.ts",
     "test": "jest",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "clean": "bash scripts/clear-regtest.sh"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +23,7 @@
     "typescript": "^5.9.2"
   },
   "dependencies": {
+    "bech32": "^2.0.0",
     "bitcoinjs-lib": "^6.0.1",
     "lodash": "^4.17.21",
     "secp256k1": "^5.0.1"

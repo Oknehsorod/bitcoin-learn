@@ -1,6 +1,5 @@
-import { getPublicKey } from '../getPublicKey';
-import { getSECPublicKey } from './getSECPublicKey';
-import { parseSECPublicKey } from '../parseSECPublicKey';
+import { getPublicKey } from '../utils/getPublicKey';
+import { decodeSEC, encodeSEC } from './sec';
 
 describe('Basic SEC public keys tests', () => {
   it('should return valid uncompressed public keys from secret ones', () => {
@@ -13,9 +12,11 @@ describe('Basic SEC public keys tests', () => {
 
     secrets.forEach((secret, idx) => {
       const publicKey = getPublicKey(secret);
-      const uncompressedSerializedKey = getSECPublicKey(publicKey);
+      const uncompressedSerializedKey = encodeSEC(publicKey);
 
-      expect(uncompressedSerializedKey).toBe(correctPublicKeys[idx]);
+      expect(uncompressedSerializedKey.toString('hex')).toBe(
+        correctPublicKeys[idx],
+      );
     });
   });
 
@@ -29,9 +30,11 @@ describe('Basic SEC public keys tests', () => {
 
     secrets.forEach((secret, idx) => {
       const publicKey = getPublicKey(secret);
-      const compressedSerializedKey = getSECPublicKey(publicKey, true);
+      const compressedSerializedKey = encodeSEC(publicKey, true);
 
-      expect(compressedSerializedKey).toBe(correctPublicKeys[idx]);
+      expect(compressedSerializedKey.toString('hex')).toBe(
+        correctPublicKeys[idx],
+      );
     });
   });
 
@@ -40,11 +43,11 @@ describe('Basic SEC public keys tests', () => {
 
     secrets.forEach((secret) => {
       const publicKey = getPublicKey(secret);
-      const uncompressedSerializedKey = getSECPublicKey(publicKey);
-      const compressedSerializedKey = getSECPublicKey(publicKey, true);
+      const uncompressedSerializedKey = encodeSEC(publicKey);
+      const compressedSerializedKey = encodeSEC(publicKey, true);
 
-      expect(parseSECPublicKey(uncompressedSerializedKey)).toEqual(publicKey);
-      expect(parseSECPublicKey(compressedSerializedKey)).toEqual(publicKey);
+      expect(decodeSEC(uncompressedSerializedKey)).toEqual(publicKey);
+      expect(decodeSEC(compressedSerializedKey)).toEqual(publicKey);
     });
   });
 });

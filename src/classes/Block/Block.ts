@@ -48,8 +48,6 @@ export class Block {
       timeDifferential = TWO_WEEKS / 4;
     }
 
-    console.log(timeDifferential / TWO_WEEKS);
-
     return (a.target * BigInt(timeDifferential)) / BigInt(TWO_WEEKS);
   }
 

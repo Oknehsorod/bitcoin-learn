@@ -1,7 +1,8 @@
 import { BitcoinNetworks } from '../../types/BitcoinNetworks';
-import { createP2PKHAddress } from './createP2PKHAddress';
-import { getSECPublicKey } from '../getSECPublicKey';
-import { getPublicKey } from '../getPublicKey';
+import { decodeP2PKH, encodeP2PKH } from './p2pkh';
+import { encodeSEC } from '../sec';
+import { getPublicKey } from '../../utils/getPublicKey';
+import { hash160 } from '../../utils/hash160';
 
 describe('Basic address creation tests', () => {
   it('should return valid addresses', () => {
@@ -34,11 +35,13 @@ describe('Basic address creation tests', () => {
     ];
 
     secrets.forEach(({ network, isCompressed, secretKey }, idx) => {
-      const result = createP2PKHAddress(
-        network,
-        getSECPublicKey(getPublicKey(secretKey), isCompressed),
-      );
+      const secKey = encodeSEC(getPublicKey(secretKey), isCompressed);
+      const result = encodeP2PKH(network, secKey);
       expect(result).toBe(outputs[idx]);
+      expect(decodeP2PKH(result).network).toBe(network);
+      expect(decodeP2PKH(result).hash.toString('hex')).toBe(
+        hash160(secKey).toString('hex'),
+      );
     });
   });
 });

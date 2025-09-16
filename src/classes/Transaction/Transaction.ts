@@ -10,12 +10,12 @@ import {
   TransactionInput,
   TransactionOutput,
 } from './types';
-import { getDERSignature } from '../../utils/getDERSignature';
 import { createSignature } from '../../utils/createSignature';
 import { ScriptEvaluator } from '../ScriptEvaluator';
-import { getSECPublicKey } from '../../utils/getSECPublicKey';
 import { getPublicKey } from '../../utils/getPublicKey';
 import { Buffer } from 'node:buffer';
+import { encodeSEC } from '../../formats/sec';
+import { encodeDER } from '../../formats/der';
 
 const DEFAULT_SEQUENCE = 0xffffffff;
 
@@ -45,7 +45,7 @@ export class Transaction {
   }
 
   static parse(transactionToParse: Buffer) {
-    if (transactionToParse[5] === 0x00)
+    if (transactionToParse[5] === 0x00 && transactionToParse[6] === 0x01)
       return this.parseSigWit(transactionToParse);
     return this.parseLegacy(transactionToParse);
   }
@@ -90,7 +90,7 @@ export class Transaction {
           items.push(buf.consume(Number(itemLength)));
         }
       }
-      inputs[i].witness = items;
+      inputs[i]!.witness = items;
     }
 
     const lockTime = buf.consumeUInt32LE();
@@ -133,10 +133,7 @@ export class Transaction {
     hashToSign: Buffer,
     hashType: SignatureHashType,
   ): Buffer {
-    const derSig = Buffer.from(
-      getDERSignature(createSignature(secretKey, hashToSign)),
-      'hex',
-    );
+    const derSig = encodeDER(createSignature(secretKey, hashToSign));
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
@@ -278,10 +275,14 @@ export class Transaction {
   }
 
   public addInput(
-    input: Optional<TransactionInput, 'sequence' | 'scriptSignature'>,
+    input: Optional<
+      TransactionInput,
+      'witness' | 'sequence' | 'scriptSignature'
+    >,
   ): this {
     this.inputs.push({
       ...input,
+      witness: input.witness ?? [],
       sequence: input.sequence ?? DEFAULT_SEQUENCE,
       scriptSignature: input.scriptSignature ?? Buffer.alloc(0),
     });
@@ -361,10 +362,7 @@ export class Transaction {
       hashType,
     );
 
-    const derSig = Buffer.from(
-      getDERSignature(createSignature(secretKey, hashToSign)),
-      'hex',
-    );
+    const derSig = encodeDER(createSignature(secretKey, hashToSign));
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
@@ -396,6 +394,10 @@ export class Transaction {
     return this;
   }
 
+  public setIsWitness(value: boolean) {
+    this.isSigWit = value;
+  }
+
   public signP2PKHInput(
     inputIndex: number,
     previousOutputScriptPublicKey: Buffer,
@@ -411,16 +413,13 @@ export class Transaction {
       hashType,
     );
 
-    const derSig = Buffer.from(
-      getDERSignature(createSignature(secretKey, hashToSign)),
-      'hex',
-    );
+    const derSig = encodeDER(createSignature(secretKey, hashToSign));
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
     const scriptEvaluator = new ScriptEvaluator();
     scriptEvaluator.fromASM(
-      `${Buffer.concat([derSig, flag]).toString('hex')} ${getSECPublicKey(getPublicKey(secretKey), isPublicKeyCompressed)}`,
+      `${Buffer.concat([derSig, flag]).toString('hex')} ${encodeSEC(getPublicKey(secretKey), isPublicKeyCompressed)}`,
     );
 
     this.setInputScriptSignature(

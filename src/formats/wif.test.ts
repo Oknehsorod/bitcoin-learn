@@ -1,5 +1,5 @@
-import { BitcoinNetworks } from '../../types/BitcoinNetworks';
-import { createWIF } from './createWIF';
+import { BitcoinNetworks } from '../types/BitcoinNetworks';
+import { decodeWIF, encodeWIF } from './wif';
 
 describe('Basic WIF creation tests', () => {
   it('should return valid WIF', () => {
@@ -32,8 +32,13 @@ describe('Basic WIF creation tests', () => {
     ];
 
     secrets.forEach(({ network, isCompressed, secretKey }, idx) => {
-      const result = createWIF(network, secretKey, isCompressed);
+      const result = encodeWIF(network, secretKey, isCompressed);
       expect(result).toBe(outputs[idx]);
+      expect(decodeWIF(result)).toEqual({
+        network,
+        secretKey,
+        isCompressedPublicKey: isCompressed,
+      });
     });
   });
 });

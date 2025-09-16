@@ -1,1 +1,0 @@
-export { getDERSignature } from './getDERSignature';

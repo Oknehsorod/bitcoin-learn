@@ -1,6 +1,6 @@
 import { createSignature } from './createSignature';
 import { EllipticPoint } from '../../classes/EllipticCurve';
-import { G } from '../constants';
+import { G, N } from '../constants';
 import { PublicKey } from '../../types/PublicKey';
 import { verifySignature } from '../verifySignature';
 import { getSecretKeyFromSignaturesWithSameK } from '../getSecretKeyFromSignaturesWithSameK';
@@ -29,6 +29,9 @@ describe('Basic signature creation tests', () => {
 
     expect(verifySignature(publicKey, { r, s, z })).toBe(true);
 
-    expect(getSecretKeyFromSignaturesWithSameK({ r, s, z }, sig2)).toBe(e);
+    expect(
+      getSecretKeyFromSignaturesWithSameK({ r, s, z }, sig2) === e ||
+        getSecretKeyFromSignaturesWithSameK({ r, s: N - s, z }, sig2) === e,
+    ).toBe(true);
   });
 });

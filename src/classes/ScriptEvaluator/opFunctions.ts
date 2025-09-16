@@ -1,10 +1,10 @@
 import { hash256 } from '../../utils/hash256';
 import { createHash } from 'node:crypto';
 import { verifySignature } from '../../utils/verifySignature';
-import { parseSECPublicKey } from '../../utils/parseSECPublicKey';
-import { parseDERSignature } from '../../utils/parseDERSignature';
 import { Signature } from '../../types/Signature';
 import { decodeNum, encodeNum } from '../../utils/scriptNumberUtils';
+import { decodeSEC } from '../../formats/sec';
+import { decodeDER } from '../../formats/der';
 
 const opDup = (stack: ScriptStack) => {
   if (stack.length < 1) return false;
@@ -81,10 +81,7 @@ const opChecksig = (stack: ScriptStack): boolean => {
   const a = stack.pop() as Buffer;
   const b = stack.pop() as Buffer;
 
-  const result = verifySignature(
-    parseSECPublicKey(b.toString('hex')),
-    parseDERSignature(a.toString('hex')) as Signature,
-  );
+  const result = verifySignature(decodeSEC(b), decodeDER(a) as Signature);
 
   stack.push(encodeNum(result ? 1 : 0));
 

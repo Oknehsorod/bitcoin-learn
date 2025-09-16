@@ -2,13 +2,19 @@ import { createP2WPKHAddress } from './utils/createP2WPKHAddress';
 import { BitcoinNetworks } from './types/BitcoinNetworks';
 import { getPublicKey } from './utils/getPublicKey';
 import { encodeSEC } from './formats/sec';
+import { encodeP2PKH } from './formats/address/p2pkh';
+import { hash160 } from './utils/hash160';
 
-const secret =
-  8642247563986041985542494319789474845694841537977676094560668689201580070894n;
+const secret = 1n;
 
-const address = createP2WPKHAddress(
-  BitcoinNetworks.MAINNET,
-  encodeSEC(getPublicKey(secret), true).toString('hex'),
+const address = encodeP2PKH(
+  BitcoinNetworks.REGTEST,
+  encodeSEC(getPublicKey(secret), true),
+);
+
+console.log(
+  address,
+  hash160(encodeSEC(getPublicKey(secret), true)).toString('hex'),
 );
 
 // const tx = new Transaction()

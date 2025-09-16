@@ -1,6 +1,6 @@
 import { BufferReader } from '../classes/BufferReader';
 
-export const readVarints = (buf: BufferReader): bigint | number => {
+export const decodeVarInt = (buf: BufferReader): bigint | number => {
   const i = buf.consumeFirstByte();
 
   if (i === 0xfd) {
@@ -16,7 +16,7 @@ export const readVarints = (buf: BufferReader): bigint | number => {
   return i as number;
 };
 
-export const encodeVarints = (i: number | bigint): Buffer => {
+export const encodeVarInt = (i: number | bigint): Buffer => {
   if (i < 0xfdn) {
     return Buffer.from([Number(i)]);
   }

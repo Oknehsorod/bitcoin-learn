@@ -1,4 +1,4 @@
-import { encodeVarints, readVarints } from '../../utils/varintsUtils';
+import { encodeVarInt, decodeVarInt } from '../../utils/varintsUtils';
 import _ from 'lodash';
 import { BufferReader } from '../BufferReader';
 import { createHash } from 'node:crypto';
@@ -11,11 +11,11 @@ import {
   TransactionOutput,
 } from './types';
 import { createSignature } from '../../utils/createSignature';
-import { ScriptEvaluator } from '../ScriptEvaluator';
 import { getPublicKey } from '../../utils/getPublicKey';
 import { Buffer } from 'node:buffer';
 import { encodeSEC } from '../../formats/sec';
 import { encodeDER } from '../../formats/der';
+import { decodeScript, encodeScript } from '../../formats/script';
 
 const DEFAULT_SEQUENCE = 0xffffffff;
 
@@ -58,32 +58,32 @@ export class Transaction {
 
     if (marker.toString('hex') !== '0001') throw new Error('Not a seg wit tx');
 
-    const inputLength = readVarints(buf);
+    const inputLength = decodeVarInt(buf);
     const inputs: TransactionInput[] = [];
     for (let i = 0; i < inputLength; i += 1) {
       inputs.push({
         previousTransactionID: buf.consume(32).reverse().toString('hex'),
         previousTransactionOutputIndex: buf.consumeUInt32LE(),
-        scriptSignature: buf.consume(Number(readVarints(buf))),
+        scriptSignature: buf.consume(Number(decodeVarInt(buf))),
         sequence: buf.consumeUInt32LE(),
         witness: [],
       });
     }
 
-    const outputLength = readVarints(buf);
+    const outputLength = decodeVarInt(buf);
     const outputs: TransactionOutput[] = [];
     for (let i = 0; i < outputLength; i += 1) {
       outputs.push({
         amount: buf.consumeBigUInt64LE(),
-        scriptPublicKey: buf.consume(Number(readVarints(buf))),
+        scriptPublicKey: buf.consume(Number(decodeVarInt(buf))),
       });
     }
 
     for (let i = 0; i < inputLength; i += 1) {
-      const numItems = readVarints(buf);
+      const numItems = decodeVarInt(buf);
       const items: Buffer[] = [];
       for (let j = 0; j < numItems; j += 1) {
-        const itemLength = readVarints(buf);
+        const itemLength = decodeVarInt(buf);
         if (itemLength === 0) {
           items.push(Buffer.alloc(0));
         } else {
@@ -102,24 +102,24 @@ export class Transaction {
 
     const version = buf.consumeUInt32LE();
 
-    const inputLength = readVarints(buf);
+    const inputLength = decodeVarInt(buf);
     const inputs: TransactionInput[] = [];
     for (let i = 0; i < inputLength; i += 1) {
       inputs.push({
         previousTransactionID: buf.consume(32).reverse().toString('hex'),
         previousTransactionOutputIndex: buf.consumeUInt32LE(),
-        scriptSignature: buf.consume(Number(readVarints(buf))),
+        scriptSignature: buf.consume(Number(decodeVarInt(buf))),
         sequence: buf.consumeUInt32LE(),
         witness: [],
       });
     }
 
-    const outputLength = readVarints(buf);
+    const outputLength = decodeVarInt(buf);
     const outputs: TransactionOutput[] = [];
     for (let i = 0; i < outputLength; i += 1) {
       outputs.push({
         amount: buf.consumeBigUInt64LE(),
-        scriptPublicKey: buf.consume(Number(readVarints(buf))),
+        scriptPublicKey: buf.consume(Number(decodeVarInt(buf))),
       });
     }
 
@@ -149,7 +149,7 @@ export class Transaction {
     const version = Buffer.alloc(4);
     version.writeUInt32LE(this.version);
 
-    const inputCount = encodeVarints(this.inputs.length);
+    const inputCount = encodeVarInt(this.inputs.length);
 
     const inputs = this.inputs.map((input) => {
       const prevTxID = Buffer.from(
@@ -159,7 +159,7 @@ export class Transaction {
       const prevIndex = Buffer.alloc(4);
       prevIndex.writeUInt32LE(input.previousTransactionOutputIndex);
 
-      const scriptSigLength = encodeVarints(input.scriptSignature.length);
+      const scriptSigLength = encodeVarInt(input.scriptSignature.length);
 
       const sequence = Buffer.alloc(4);
       sequence.writeUInt32LE(input.sequence ?? 0xffffffff);
@@ -173,13 +173,13 @@ export class Transaction {
       ];
     });
 
-    const outputCount = encodeVarints(this.outputs.length);
+    const outputCount = encodeVarInt(this.outputs.length);
 
     const outputs = this.outputs.map((output) => {
       const amount = Buffer.alloc(8);
       amount.writeBigUInt64LE(output.amount);
 
-      const scriptPubKeyLength = encodeVarints(output.scriptPublicKey.length);
+      const scriptPubKeyLength = encodeVarInt(output.scriptPublicKey.length);
 
       return [amount, scriptPubKeyLength, output.scriptPublicKey];
     });
@@ -188,10 +188,10 @@ export class Transaction {
 
     this.inputs.forEach(({ witness }) => {
       const stackItems = witness.map((w) =>
-        Buffer.concat([encodeVarints(w.length), w]),
+        Buffer.concat([encodeVarInt(w.length), w]),
       );
       const inputWitness = Buffer.concat([
-        encodeVarints(witness.length),
+        encodeVarInt(witness.length),
         ...stackItems,
       ]);
       witnessBuffers.push(inputWitness);
@@ -218,7 +218,7 @@ export class Transaction {
     const version = Buffer.alloc(4);
     version.writeUInt32LE(this.version);
 
-    const inputCount = encodeVarints(this.inputs.length);
+    const inputCount = encodeVarInt(this.inputs.length);
 
     const inputs = this.inputs.map((input) => {
       const prevTxID = Buffer.from(
@@ -228,7 +228,7 @@ export class Transaction {
       const prevIndex = Buffer.alloc(4);
       prevIndex.writeUInt32LE(input.previousTransactionOutputIndex);
 
-      const scriptSigLength = encodeVarints(input.scriptSignature.length);
+      const scriptSigLength = encodeVarInt(input.scriptSignature.length);
 
       const sequence = Buffer.alloc(4);
       sequence.writeUInt32LE(input.sequence ?? 0xffffffff);
@@ -242,13 +242,13 @@ export class Transaction {
       ];
     });
 
-    const outputCount = encodeVarints(this.outputs.length);
+    const outputCount = encodeVarInt(this.outputs.length);
 
     const outputs = this.outputs.map((output) => {
       const amount = Buffer.alloc(8);
       amount.writeBigUInt64LE(output.amount);
 
-      const scriptPubKeyLength = encodeVarints(output.scriptPublicKey.length);
+      const scriptPubKeyLength = encodeVarInt(output.scriptPublicKey.length);
 
       return [amount, scriptPubKeyLength, output.scriptPublicKey];
     });
@@ -366,12 +366,9 @@ export class Transaction {
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
-    const scriptEvaluator = new ScriptEvaluator();
-    scriptEvaluator.fromASM(Buffer.concat([derSig, flag]).toString('hex'));
-
     this.setInputScriptSignature(
       inputIndex,
-      Buffer.from(scriptEvaluator.serialize(), 'hex'),
+      encodeScript(Buffer.concat([derSig, flag]).toString('hex')).buffer,
     );
 
     return this;
@@ -417,14 +414,11 @@ export class Transaction {
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
-    const scriptEvaluator = new ScriptEvaluator();
-    scriptEvaluator.fromASM(
-      `${Buffer.concat([derSig, flag]).toString('hex')} ${encodeSEC(getPublicKey(secretKey), isPublicKeyCompressed)}`,
-    );
-
     this.setInputScriptSignature(
       inputIndex,
-      Buffer.from(scriptEvaluator.serialize(), 'hex'),
+      encodeScript(
+        `${Buffer.concat([derSig, flag]).toString('hex')} ${encodeSEC(getPublicKey(secretKey), isPublicKeyCompressed)}`,
+      ).buffer,
     );
 
     return this;
@@ -460,9 +454,8 @@ export class Transaction {
     if (!this.isCoinbase) throw new Error('Not a coinbase tx!');
     if (!this.inputs[0]) throw new Error('There is no such an input!');
 
-    const se = new ScriptEvaluator();
-    se.parse(this.inputs[0].scriptSignature.toString('hex'));
-    const blockHeight = se.cmds[0];
+    const { parsed } = decodeScript(this.inputs[0].scriptSignature);
+    const blockHeight = parsed[0];
     if (!Buffer.isBuffer(blockHeight)) throw new Error("It's not a buffer");
 
     return blockHeight.readUIntLE(0, 4);

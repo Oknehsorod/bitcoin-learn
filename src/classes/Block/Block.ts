@@ -125,7 +125,7 @@ export class Block {
     let exponent = bytes.length;
     let coefficient: Buffer;
 
-    if (bytes[0] & 0x80) {
+    if (bytes[0]! & 0x80) {
       exponent++;
       coefficient = Buffer.concat([Buffer.from([0x00]), bytes]).subarray(0, 3);
     } else {

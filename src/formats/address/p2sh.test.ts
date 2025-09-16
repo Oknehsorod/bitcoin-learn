@@ -1,7 +1,7 @@
-import { ScriptEvaluator } from '../../classes/ScriptEvaluator';
 import { decodeP2SH, encodeP2SH } from './p2sh';
 import { BitcoinNetworks } from '../../types/BitcoinNetworks';
 import { hash160 } from '../../utils/hash160';
+import { encodeScript } from '../script';
 
 describe('Basic createP2SHAddress tests', () => {
   it('should return correct address', () => {
@@ -11,13 +11,12 @@ describe('Basic createP2SHAddress tests', () => {
 
     const network = BitcoinNetworks.TESTNET;
 
-    const se = new ScriptEvaluator();
-    se.fromASM(input);
-    const address = encodeP2SH(network, Buffer.from(se.serialize(), 'hex'));
+    const script = encodeScript(input);
+    const address = encodeP2SH(network, script.buffer);
 
     expect(address).toBe(output);
     expect(decodeP2SH(address).scriptHash.toString('hex')).toBe(
-      hash160(Buffer.from(se.serialize(), 'hex')).toString('hex'),
+      hash160(script.buffer).toString('hex'),
     );
   });
 });

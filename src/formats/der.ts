@@ -1,15 +1,23 @@
 import { Signature } from '../types/Signature';
 import { BufferReader } from '../classes/BufferReader';
-import { isNumber } from 'lodash';
+import _ from 'lodash';
 
 const DER_MARKER = Buffer.from([0x30]);
 const DER_VALUE_MARKER = Buffer.from([0x02]);
 
 const encodeInt = (num: bigint): Buffer => {
-  let buf = Buffer.from(num.toString(16).padStart(2, '0'), 'hex');
+  let hex = num.toString(16);
+  if (hex.length % 2 !== 0) hex = '0' + hex; // pad if odd length
+  let buf = Buffer.from(hex, 'hex');
+
+  // strip leading 0x00 if unnecessary
   while (buf.length > 1 && buf[0] === 0x00) buf = buf.subarray(1);
-  if ((buf[0] as number) & 0x80)
+
+  // add sign byte if high bit set
+  if (buf[0]! & 0x80) {
     buf = Buffer.concat([Buffer.from([0x00]), buf]);
+  }
+
   return buf;
 };
 
@@ -49,7 +57,7 @@ export const decodeDER = (der: Buffer): Signature | null => {
 
   const rValueLength = buf.consumeUInt8();
 
-  if (!isNumber(rValueLength)) return null;
+  if (!_.isNumber(rValueLength)) return null;
 
   const rValue = BigInt('0x' + buf.consume(rValueLength).toString('hex'));
 

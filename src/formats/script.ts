@@ -1,5 +1,5 @@
 import { BufferReader } from '../classes/BufferReader';
-import { isNil } from 'lodash';
+import _ from 'lodash';
 
 const OP_CODE = {
   '0': 0x00,
@@ -63,7 +63,7 @@ const NUMBER_TO_OP_CODE: Record<number, OPCodeKeys> = Object.keys(
 
 type ParsedScript = (number | Buffer)[];
 
-interface ScriptOutput {
+export interface ScriptOutput {
   buffer: Buffer;
   asm: string;
   parsed: ParsedScript;
@@ -76,7 +76,7 @@ export const encodeScript = (asm: string): ScriptOutput => {
   asm.split(' ').forEach((el) => {
     const opCode = ASM_TO_OP_CODE[el];
 
-    if (isNil(opCode)) {
+    if (_.isNil(opCode)) {
       const scriptData = Buffer.from(el, 'hex');
       const dataLength = scriptData.length;
 
@@ -149,7 +149,7 @@ export const decodeScript = (scriptToCompile: Buffer): ScriptOutput => {
       const value = buf.consume(buf.consumeUInt32LE());
       parsed.push(value);
       result.push(value.toString('hex'));
-    } else if (!isNil(opCode)) {
+    } else if (!_.isNil(opCode)) {
       result.push(OP_CODE_TO_ASM[opCode]);
       parsed.push(rawNumber);
     } else {

@@ -6,6 +6,7 @@ import { hash256 } from '../../utils/hash256';
 import { decodeBase58, encodeBase58 } from '../base58';
 import { hash160 } from '../../utils/hash160';
 import { BufferReader } from '../../classes/BufferReader';
+import { encodeScript } from '../script';
 
 export const encodeP2PKH = (
   network: BitcoinNetworks,
@@ -47,3 +48,11 @@ export const decodeP2PKH = (address: string): P2PKHData => {
     hash,
   };
 };
+
+export const getP2PKHScriptPubKey = (address: string) =>
+  encodeScript(
+    `OP_DUP OP_HASH160 ${decodeP2PKH(address).hash.toString('hex')} OP_EQUALVERIFY OP_CHECKSIG`,
+  );
+
+export const getP2PKHScriptSig = (signature: Buffer, pubKey: Buffer) =>
+  encodeScript(`${signature.toString('hex')} ${pubKey.toString('hex')}`);

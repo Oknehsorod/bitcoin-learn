@@ -6,6 +6,7 @@ import { hash160 } from '../../utils/hash160';
 import { decodeBase58, encodeBase58 } from '../base58';
 import { hash256 } from '../../utils/hash256';
 import { BufferReader } from '../../classes/BufferReader';
+import { encodeScript } from '../script';
 
 export const encodeP2SH = (network: BitcoinNetworks, script: Buffer) => {
   const redeemScriptHash = hash160(script);
@@ -51,3 +52,11 @@ export const decodeP2SH = (val: string): P2SHData => {
     scriptHash: redeemScriptHash,
   };
 };
+
+export const getP2SHScriptPubKey = (address: string): Buffer =>
+  encodeScript(
+    `OP_HASH160 ${decodeP2SH(address).scriptHash.toString('hex')} OP_EQUALVERIFY OP_CHECKSIG`,
+  ).buffer;
+
+export const getP2SHScriptSig = (redeemScript: Buffer, asm = ''): Buffer =>
+  encodeScript(`${asm} ${redeemScript.toString('hex')}`).buffer;

@@ -19,5 +19,7 @@ describe('Basic DER signatures tests', () => {
     expect(encodeDER(signature).toString('hex')).toBe(output);
 
     expect(decodeDER(Buffer.from(output, 'hex'))).toEqual(signature);
+
+    expect(decodeDER(encodeDER(signature))).toEqual(signature);
   });
 });

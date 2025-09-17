@@ -1,33 +1,49 @@
-import { createP2WPKHAddress } from './utils/createP2WPKHAddress';
-import { BitcoinNetworks } from './types/BitcoinNetworks';
-import { getPublicKey } from './utils/getPublicKey';
-import { encodeSEC } from './formats/sec';
-import { encodeP2PKH } from './formats/address/p2pkh';
-import { hash160 } from './utils/hash160';
+import { infoAddress } from './utils/infoAddress';
+import { btcToSatoshi } from './utils/btcToSatoshi';
+import { SignatureHashType } from './types/SignatureHashType';
+import { Transaction } from './classes/Transaction';
+import {
+  getP2WPKHScriptPubKey,
+  getP2WPKHWitness,
+} from './formats/address/p2wpkh';
 
-const secret = 1n;
+const from = infoAddress(1n);
+const to = infoAddress(2n);
 
-const address = encodeP2PKH(
-  BitcoinNetworks.REGTEST,
-  encodeSEC(getPublicKey(secret), true),
+const inputAmount = btcToSatoshi(50);
+const amountToSpend = btcToSatoshi(1);
+
+const tx = new Transaction()
+  .addInput({
+    previousTransactionID:
+      '489302fc5c4a745271331149937222f40bd6bc98c414806255cab53d3473f70d',
+    previousTransactionOutputIndex: 0,
+  })
+  .addOutput({
+    amount: amountToSpend - 1000n,
+    scriptPublicKey: to.P2WPKHPubKey.buffer,
+  })
+  .addOutput({
+    amount: inputAmount - amountToSpend,
+    scriptPublicKey: from.P2WPKHPubKey.buffer,
+  })
+  .setVersion(2);
+
+const hashToSign = tx.getSighHashWitnessV0(
+  0,
+  getP2WPKHScriptPubKey(from.P2WPKH).buffer,
+  inputAmount,
+  SignatureHashType.SIGHASH_ALL,
 );
 
-console.log(
-  address,
-  hash160(encodeSEC(getPublicKey(secret), true)).toString('hex'),
+const signature = Transaction.getSignature(
+  from.secret,
+  hashToSign,
+  SignatureHashType.SIGHASH_ALL,
 );
 
-// const tx = new Transaction()
-//   .addInput({
-//     previousTransactionID:
-//       '489302fc5c4a745271331149937222f40bd6bc98c414806255cab53d3473f70d',
-//     previousTransactionOutputIndex: 0,
-//   })
-//   .addOutput({
-//     amount: btcToSatoshi(50) - 1000n,
-//     scriptPublicKey: script.fromASM(
-//       `0 06afd46bcdfd22ef94ac122aa11f241244a37ecc`,
-//     ),
-//   });
+tx.setIsWitness(true);
 
-console.log('Address: ', address);
+tx.setInputWitness(0, getP2WPKHWitness(signature, from.SECKey));
+
+console.log(tx.serialize().toString('hex'));

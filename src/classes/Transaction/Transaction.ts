@@ -1,4 +1,4 @@
-import { encodeVarInt, decodeVarInt } from '../../utils/varintsUtils';
+import { decodeVarInt, encodeVarInt } from '../../utils/varintsUtils';
 import _ from 'lodash';
 import { BufferReader } from '../BufferReader';
 import { createHash } from 'node:crypto';
@@ -16,6 +16,8 @@ import { Buffer } from 'node:buffer';
 import { encodeSEC } from '../../formats/sec';
 import { encodeDER } from '../../formats/der';
 import { decodeScript, encodeScript } from '../../formats/script';
+import { hash256 } from '../../utils/hash256';
+import { verifySignature } from '../../utils/verifySignature';
 
 const DEFAULT_SEQUENCE = 0xffffffff;
 
@@ -133,9 +135,13 @@ export class Transaction {
     hashToSign: Buffer,
     hashType: SignatureHashType,
   ): Buffer {
-    const derSig = encodeDER(createSignature(secretKey, hashToSign));
+    const signature = createSignature(secretKey, hashToSign);
+    const derSig = encodeDER(signature);
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
+
+    if (!verifySignature(getPublicKey(secretKey), signature))
+      throw new Error('Wrong signature');
 
     return Buffer.concat([derSig, flag]);
   }
@@ -312,6 +318,13 @@ export class Transaction {
     return this;
   }
 
+  public setInputWitness(inputIndex: number, value: Buffer[]): this {
+    if (_.isNil(this.inputs[inputIndex]))
+      throw new Error('There is not such input');
+    this.inputs[inputIndex].witness = value;
+    return this;
+  }
+
   public getSignHash(
     inputIndex: number,
     previousOutputScriptPublicKey: Buffer,
@@ -345,6 +358,80 @@ export class Transaction {
     return createHash('sha256')
       .update(createHash('sha256').update(hexedTx).digest())
       .digest();
+  }
+
+  public getSighHashWitnessV0(
+    inputIndex: number,
+    prevOutputScript: Buffer,
+    amount: bigint,
+    hashType: SignatureHashType = SignatureHashType.SIGHASH_ALL,
+  ): Buffer {
+    const version = Buffer.alloc(4);
+    version.writeUInt32LE(this.version);
+
+    const locktime = Buffer.alloc(4);
+    locktime.writeUInt32LE(this.lockTime);
+
+    let prevOuts: Buffer[] = [];
+    let sequence: Buffer[] = [];
+
+    let outs: Buffer = Buffer.alloc(0);
+
+    this.inputs.forEach((input) => {
+      const prevTxIdLE = Buffer.from(
+        input.previousTransactionID,
+        'hex',
+      ).reverse();
+      const prevTxIdxLE = Buffer.alloc(4);
+      const seq = Buffer.alloc(4);
+      seq.writeUInt32LE(input.sequence);
+
+      sequence.push(seq);
+
+      prevTxIdxLE.writeUInt32LE(input.previousTransactionOutputIndex);
+
+      prevOuts.push(Buffer.concat([prevTxIdLE, prevTxIdxLE]));
+    });
+
+    this.outputs.forEach((output) => {
+      const amount = Buffer.alloc(8);
+      amount.writeBigUInt64LE(output.amount);
+
+      const pubKey = Buffer.concat([
+        encodeVarInt(output.scriptPublicKey.length),
+        output.scriptPublicKey,
+      ]);
+
+      outs = Buffer.concat([outs, amount, pubKey]);
+    });
+
+    const hashPrevOuts = hash256(Buffer.concat(prevOuts));
+    const hashSequence = hash256(Buffer.concat(sequence));
+    const hashOutputs = hash256(outs);
+
+    const amountBuffer = Buffer.alloc(8);
+    amountBuffer.writeBigUInt64LE(amount);
+
+    const hashTypeBuffer = Buffer.alloc(4);
+    hashTypeBuffer.writeUInt32LE(hashType);
+
+    return hash256(
+      Buffer.concat([
+        version,
+        hashPrevOuts,
+        hashSequence,
+        prevOuts[inputIndex]!,
+        Buffer.concat([
+          encodeVarInt(prevOutputScript.length),
+          prevOutputScript,
+        ]),
+        amountBuffer,
+        sequence[inputIndex]!,
+        hashOutputs,
+        locktime,
+        hashTypeBuffer,
+      ]),
+    );
   }
 
   public signP2PKInput(

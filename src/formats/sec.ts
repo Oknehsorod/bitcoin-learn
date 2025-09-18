@@ -11,10 +11,7 @@ const UNCOMPRESSED_KEY_PREFIX = Buffer.from([0x04]);
 const COMPRESSED_EVEN_KEY_PREFIX = Buffer.from([0x02]);
 const COMPRESSED_ODD_KEY_PREFIX = Buffer.from([0x03]);
 
-export const encodeSEC = (
-  { x, y }: PublicKey,
-  isCompressed = false,
-): Buffer => {
+export const encodeSEC = ({ x, y }: PublicKey, isCompressed = true): Buffer => {
   if (!isCompressed)
     return Buffer.concat([
       UNCOMPRESSED_KEY_PREFIX,

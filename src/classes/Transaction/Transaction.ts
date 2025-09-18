@@ -1,10 +1,8 @@
 import { decodeVarInt, encodeVarInt } from '../../utils/varintsUtils';
 import _ from 'lodash';
 import { BufferReader } from '../BufferReader';
-import { createHash } from 'node:crypto';
 import { SignatureHashType } from '../../types/SignatureHashType';
 import {
-  CredentialKey,
   Optional,
   TransactionExport,
   TransactionInput,
@@ -13,9 +11,8 @@ import {
 import { createSignature } from '../../utils/createSignature';
 import { getPublicKey } from '../../utils/getPublicKey';
 import { Buffer } from 'node:buffer';
-import { encodeSEC } from '../../formats/sec';
 import { decodeDER, encodeDER } from '../../formats/der';
-import { decodeScript, encodeScript } from '../../formats/script';
+import { decodeScript } from '../../formats/script';
 import { hash256 } from '../../utils/hash256';
 import { verifySignature } from '../../utils/verifySignature';
 
@@ -28,22 +25,17 @@ export class Transaction {
   private readonly inputs: TransactionInput[];
   private readonly outputs: TransactionOutput[];
 
-  private isSigWit: boolean;
-
   constructor(
     inputs: TransactionInput[] = [],
     outputs: TransactionOutput[] = [],
     lockTime = 0,
     version = 1,
-    isSegWit = false,
   ) {
     this.version = version;
     this.lockTime = lockTime;
 
     this.inputs = inputs;
     this.outputs = outputs;
-
-    this.isSigWit = isSegWit;
   }
 
   static parse(transactionToParse: Buffer) {
@@ -96,7 +88,7 @@ export class Transaction {
     }
 
     const lockTime = buf.consumeUInt32LE();
-    return new Transaction(inputs, outputs, lockTime, version, true);
+    return new Transaction(inputs, outputs, lockTime, version);
   }
 
   static parseLegacy(transactionToParse: Buffer) {
@@ -152,7 +144,7 @@ export class Transaction {
   }
 
   public serialize(): Buffer {
-    if (!this.isSigWit) return this.serializeLegacy();
+    if (!this.isSegregatedWitness) return this.serializeLegacy();
     return this.serializeSegWit();
   }
 
@@ -358,11 +350,9 @@ export class Transaction {
     const flag = Buffer.alloc(4);
     flag.writeUInt32LE(hashType);
 
-    const hexedTx = Buffer.concat([transactionToHash.serialize(), flag]);
+    const hexedTx = Buffer.concat([transactionToHash.serializeLegacy(), flag]);
 
-    return createHash('sha256')
-      .update(createHash('sha256').update(hexedTx).digest())
-      .digest();
+    return hash256(hexedTx);
   }
 
   public getSighHashWitnessV0(
@@ -439,98 +429,8 @@ export class Transaction {
     );
   }
 
-  public signP2PKInput(
-    inputIndex: number,
-    previousOutputScriptPublicKey: Buffer,
-    { secretKey }: CredentialKey,
-    hashType: SignatureHashType,
-  ): this {
-    if (_.isNil(this.inputs[inputIndex]))
-      throw new Error('There is not such input');
-
-    const hashToSign = this.getSignHash(
-      inputIndex,
-      previousOutputScriptPublicKey,
-      hashType,
-    );
-
-    const derSig = encodeDER(createSignature(secretKey, hashToSign));
-    const flag = Buffer.alloc(1);
-    flag.writeUInt8(hashType);
-
-    this.setInputScriptSignature(
-      inputIndex,
-      encodeScript(Buffer.concat([derSig, flag]).toString('hex')).buffer,
-    );
-
-    return this;
-  }
-
-  public signP2PK(
-    previousOutputScriptPublicKey: Buffer,
-    credentialKey: CredentialKey,
-    hashType: SignatureHashType,
-  ): this {
-    this.inputs.forEach((_, idx) =>
-      this.signP2PKInput(
-        idx,
-        previousOutputScriptPublicKey,
-        credentialKey,
-        hashType,
-      ),
-    );
-
-    return this;
-  }
-
-  public setIsWitness(value: boolean) {
-    this.isSigWit = value;
-  }
-
-  public signP2PKHInput(
-    inputIndex: number,
-    previousOutputScriptPublicKey: Buffer,
-    { secretKey, isPublicKeyCompressed }: CredentialKey,
-    hashType: SignatureHashType,
-  ): this {
-    if (_.isNil(this.inputs[inputIndex]))
-      throw new Error('There is not such input');
-
-    const hashToSign = this.getSignHash(
-      inputIndex,
-      previousOutputScriptPublicKey,
-      hashType,
-    );
-
-    const derSig = encodeDER(createSignature(secretKey, hashToSign));
-    const flag = Buffer.alloc(1);
-    flag.writeUInt8(hashType);
-
-    this.setInputScriptSignature(
-      inputIndex,
-      encodeScript(
-        `${Buffer.concat([derSig, flag]).toString('hex')} ${encodeSEC(getPublicKey(secretKey), isPublicKeyCompressed)}`,
-      ).buffer,
-    );
-
-    return this;
-  }
-
-  public signP2PKH(
-    previousOutputScriptPublicKey: Buffer,
-    credentialKey: CredentialKey,
-    hashType: SignatureHashType,
-  ): this {
-    this.inputs.forEach((_, idx) =>
-      this.signP2PKHInput(
-        idx,
-        previousOutputScriptPublicKey,
-        credentialKey,
-        hashType,
-      ),
-    );
-
-    return this;
+  get isSegregatedWitness() {
+    return this.inputs.some((el) => el.witness.length > 0);
   }
 
   get isCoinbase() {

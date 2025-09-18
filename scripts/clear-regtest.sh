@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-mkdir ".blockchain"
+mkdir -p ".blockchain"
 
 # Load variables from .env
 if [ -f ".env" ]; then
@@ -36,6 +36,6 @@ if [ ! -f "./bitcoin.conf" ]; then
 fi
 
 echo ">>> Restarting bitcoind in regtest mode..."
-bitcoind -regtest -datadir="$BITCOIN_DATADIR" -conf="$(pwd)/bitcoin.conf" -daemon
+bitcoind -regtest -datadir="/Users/oknehsorod/Documents/Work/Projects/bitcoin-learn/.blockchain" -conf="$(pwd)/bitcoin.conf" -daemon
 
 echo ">>> Done. Fresh regtest blockchain started."

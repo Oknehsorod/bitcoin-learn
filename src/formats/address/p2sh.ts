@@ -53,10 +53,10 @@ export const decodeP2SH = (val: string): P2SHData => {
   };
 };
 
-export const getP2SHScriptPubKey = (address: string): Buffer =>
+export const getP2SHScriptPubKey = (address: string) =>
   encodeScript(
-    `OP_HASH160 ${decodeP2SH(address).scriptHash.toString('hex')} OP_EQUALVERIFY OP_CHECKSIG`,
-  ).buffer;
+    `OP_HASH160 ${decodeP2SH(address).scriptHash.toString('hex')} OP_EQUAL`,
+  );
 
 export const getP2SHScriptSig = (redeemScript: Buffer, asm = ''): Buffer =>
   encodeScript(`${asm} ${redeemScript.toString('hex')}`).buffer;

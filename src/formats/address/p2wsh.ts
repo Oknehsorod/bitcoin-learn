@@ -4,6 +4,7 @@ import {
   BITCOIN_NETWORK_TO_WITNESS_ADDRESS_PREFIX,
   BitcoinNetworks,
 } from '../../types/BitcoinNetworks';
+import { encodeScript } from '../script';
 
 interface P2PWSHData {
   network: BitcoinNetworks;
@@ -46,3 +47,11 @@ export const decodeP2WSH = (address: string): P2PWSHData => {
     hash: Buffer.from(program),
   };
 };
+
+export const getP2WSHScriptPubKey = (address: string) =>
+  encodeScript(`OP_0 ${decodeP2WSH(address).hash.toString('hex')}`);
+
+export const getP2WSHWitness = (
+  data: Buffer[],
+  redeemScript: Buffer,
+): Buffer[] => [...data, redeemScript];

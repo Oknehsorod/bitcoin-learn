@@ -14,7 +14,7 @@ import { createSignature } from '../../utils/createSignature';
 import { getPublicKey } from '../../utils/getPublicKey';
 import { Buffer } from 'node:buffer';
 import { encodeSEC } from '../../formats/sec';
-import { encodeDER } from '../../formats/der';
+import { decodeDER, encodeDER } from '../../formats/der';
 import { decodeScript, encodeScript } from '../../formats/script';
 import { hash256 } from '../../utils/hash256';
 import { verifySignature } from '../../utils/verifySignature';
@@ -140,7 +140,12 @@ export class Transaction {
     const flag = Buffer.alloc(1);
     flag.writeUInt8(hashType);
 
-    if (!verifySignature(getPublicKey(secretKey), signature))
+    if (
+      !verifySignature(getPublicKey(secretKey), {
+        ...decodeDER(derSig)!,
+        z: BigInt('0x' + hashToSign.toString('hex')),
+      })
+    )
       throw new Error('Wrong signature');
 
     return Buffer.concat([derSig, flag]);

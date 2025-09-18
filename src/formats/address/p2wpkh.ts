@@ -52,6 +52,9 @@ export const decodeP2WPKH = (address: string): P2PWKHData => {
 };
 
 export const getP2WPKHScriptPubKey = (address: string) =>
+  encodeScript(`OP_0 ${decodeP2WPKH(address).hash.toString('hex')}`);
+
+export const getP2WPKHScriptForSigning = (address: string) =>
   encodeScript(
     `OP_DUP OP_HASH160 ${decodeP2WPKH(address).hash.toString('hex')} OP_EQUALVERIFY OP_CHECKSIG`,
   );

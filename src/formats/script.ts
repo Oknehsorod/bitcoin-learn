@@ -31,6 +31,7 @@ const OP_CODE = {
   HASH160: 0xa9,
   EQUALVERIFY: 0x88,
   CHECKSIG: 0xac,
+  CHECKMULTISIG: 0xae,
 };
 
 type OPCodeKeys = keyof typeof OP_CODE;

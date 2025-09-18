@@ -12,7 +12,7 @@ describe('Basic SEC public keys tests', () => {
 
     secrets.forEach((secret, idx) => {
       const publicKey = getPublicKey(secret);
-      const uncompressedSerializedKey = encodeSEC(publicKey);
+      const uncompressedSerializedKey = encodeSEC(publicKey, false);
 
       expect(uncompressedSerializedKey.toString('hex')).toBe(
         correctPublicKeys[idx],

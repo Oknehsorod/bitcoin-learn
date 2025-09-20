@@ -15,6 +15,13 @@ import { decodeDER, encodeDER } from '../../formats/der';
 import { decodeScript } from '../../formats/script';
 import { hash256 } from '../../utils/hash256';
 import { verifySignature } from '../../utils/verifySignature';
+import { hashTagged } from '../../utils/hashTagged';
+import {
+  createSchnorrSignature,
+  verifySchnorrSignature,
+} from '../../utils/schnorrSignature';
+import { bigIntToBigEndianBytes } from '../../utils/bytesUtils';
+import { BufferWriter } from '../BufferWriter';
 
 const DEFAULT_SEQUENCE = 0xffffffff;
 
@@ -141,6 +148,27 @@ export class Transaction {
       throw new Error('Wrong signature');
 
     return Buffer.concat([derSig, flag]);
+  }
+
+  static getSchnorrSignature(
+    secretKey: bigint,
+    hashToSign: Buffer,
+    hashType: SignatureHashType,
+  ): Buffer {
+    const signature = createSchnorrSignature(secretKey, hashToSign);
+    const flag = Buffer.alloc(1);
+    flag.writeUInt8(hashType);
+
+    if (
+      !verifySchnorrSignature(
+        bigIntToBigEndianBytes(getPublicKey(secretKey).x),
+        hashToSign,
+        signature,
+      )
+    )
+      throw new Error('Invalid schnorr signature');
+
+    return Buffer.concat([signature, flag]);
   }
 
   public serialize(): Buffer {
@@ -426,6 +454,130 @@ export class Transaction {
         locktime,
         hashTypeBuffer,
       ]),
+    );
+  }
+
+  public getSighHashWitnessV1(
+    inputIndex: number,
+    prevOutputScripts: Buffer[],
+    amounts: bigint[],
+    merklePath: Buffer[] = [],
+    leafVersion: number = 0xc0,
+    hashType: SignatureHashType = SignatureHashType.SIGHASH_ALL,
+  ): Buffer {
+    const bufWriter = new BufferWriter()
+      .writeUInt8(hashType)
+      .writeUInt32LE(this.version)
+      .writeUInt32LE(this.lockTime);
+
+    if (hashType !== SignatureHashType.SIGHASH_ANYONECANPAY) {
+      bufWriter.appendSHA256(
+        Buffer.concat(
+          this.inputs.map((input) => {
+            const prevTxIdLE = Buffer.from(
+              input.previousTransactionID,
+              'hex',
+            ).reverse();
+            const prevTxIdxLE = Buffer.alloc(4);
+            prevTxIdxLE.writeUInt32LE(input.previousTransactionOutputIndex);
+
+            return Buffer.concat([prevTxIdLE, prevTxIdxLE]);
+          }),
+        ),
+      );
+
+      bufWriter.appendSHA256(
+        Buffer.concat(
+          amounts.map((amount) => {
+            const amountLE = Buffer.alloc(8);
+            amountLE.writeBigUInt64LE(amount);
+            return amountLE;
+          }),
+        ),
+      );
+
+      bufWriter.appendSHA256(
+        Buffer.concat(
+          prevOutputScripts.map((script) =>
+            Buffer.concat([encodeVarInt(script.length), script]),
+          ),
+        ),
+      );
+
+      bufWriter.appendSHA256(
+        Buffer.concat(
+          this.inputs.map((input) => {
+            const sequenceLE = Buffer.alloc(4);
+            sequenceLE.writeUInt32LE(input.sequence);
+            return sequenceLE;
+          }),
+        ),
+      );
+    }
+
+    if (
+      hashType !== SignatureHashType.SIGHASH_NONE &&
+      hashType !== SignatureHashType.SIGHASH_SINGLE
+    ) {
+      bufWriter.appendSHA256(
+        Buffer.concat(
+          this.outputs.map((output) => {
+            const amountLE = Buffer.alloc(8);
+            amountLE.writeBigUInt64LE(output.amount);
+
+            return Buffer.concat([
+              amountLE,
+              encodeVarInt(output.scriptPublicKey.length),
+              output.scriptPublicKey,
+            ]);
+          }),
+        ),
+      );
+    }
+
+    bufWriter.writeUInt8(merklePath.length > 0 ? 0x01 : 0x00);
+
+    if (hashType === SignatureHashType.SIGHASH_ANYONECANPAY) {
+      bufWriter.append(
+        Buffer.from(
+          this.inputs[inputIndex]!.previousTransactionID,
+          'hex',
+        ).reverse(),
+      );
+      bufWriter.writeUInt32LE(
+        this.inputs[inputIndex]!.previousTransactionOutputIndex,
+      );
+      bufWriter.append(
+        Buffer.concat([
+          encodeVarInt(this.inputs[inputIndex]!.scriptSignature.length),
+          this.inputs[inputIndex]!.scriptSignature,
+        ]),
+      );
+      bufWriter.writeUInt32LE(this.inputs[inputIndex]!.sequence);
+    }
+
+    if (hashType !== SignatureHashType.SIGHASH_ANYONECANPAY) {
+      bufWriter.writeUInt32LE(inputIndex);
+    }
+
+    if (hashType === SignatureHashType.SIGHASH_SINGLE) {
+      const correspondingOutput = this.outputs[inputIndex]!;
+
+      const amountLE = Buffer.alloc(8);
+      amountLE.writeBigUInt64LE(correspondingOutput.amount);
+
+      bufWriter.appendSHA256(
+        Buffer.concat([
+          amountLE,
+          encodeVarInt(correspondingOutput.scriptPublicKey.length),
+          correspondingOutput.scriptPublicKey,
+        ]),
+      );
+    }
+
+    return hashTagged(
+      'TapSighash',
+      Buffer.concat([Buffer.from([0x00]), bufWriter.getBuffer()]),
     );
   }
 

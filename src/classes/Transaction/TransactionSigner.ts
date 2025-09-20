@@ -15,6 +15,7 @@ import {
   getP2WPKHWitness,
 } from '../../formats/address/p2wpkh';
 import { getP2WSHWitness } from '../../formats/address/p2wsh';
+import { Buffer } from 'node:buffer';
 
 export class TransactionSigner {
   private readonly transaction: Transaction;
@@ -240,7 +241,7 @@ export class TransactionSigner {
     return this;
   }
 
-  public getWitnessSignature(
+  public getWitnessV0Signature(
     inputIndex: number,
     secret: bigint,
     prevOutputScript: Buffer,
@@ -257,6 +258,27 @@ export class TransactionSigner {
       ),
       hashType,
     );
+  }
+
+  public getWitnessV1Signature(
+    inputIndex: number,
+    tweakedSecret: bigint,
+    prevOutputScript: Buffer[],
+    amount: bigint[],
+    hashType = SignatureHashType.SIGHASH_ALL,
+    merklePath: Buffer[] = [],
+    leafVersion: number = 0xc0,
+  ) {
+    const hashToSign = this.transaction.getSighHashWitnessV1(
+      inputIndex,
+      prevOutputScript,
+      amount,
+      merklePath,
+      leafVersion,
+      hashType,
+    );
+
+    return Transaction.getSchnorrSignature(tweakedSecret, hashToSign, hashType);
   }
 
   public getTransaction(): Transaction {

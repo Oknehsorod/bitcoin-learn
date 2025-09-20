@@ -123,6 +123,14 @@ export class EllipticPoint {
     return result;
   }
 
+  public hasEvenY() {
+    return this.y?.getValue()! % 2n === 0n;
+  }
+
+  public getX() {
+    return this.x;
+  }
+
   public getParams(): [
     FiniteElement,
     FiniteElement,

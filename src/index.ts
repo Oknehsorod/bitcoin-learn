@@ -5,6 +5,11 @@ import { infoScript } from './utils/infoScript';
 import { TransactionSigner } from './classes/Transaction/TransactionSigner';
 import { infoTaproot } from './utils/infoTaproot';
 import { getP2TRScriptPubKey } from './formats/address/p2tr';
+import { encodeScript } from './formats/script';
+import {
+  getTaprootPath,
+  TAPROOT_LEAF_VERSION,
+} from './utils/createTaprootTree';
 
 const from = infoAddress(1n);
 const to = infoAddress(2n);
@@ -20,13 +25,13 @@ const tr = infoTaproot(from.secret, scripts);
 
 const sh = infoScript(shNew.P2WSHPubKey.asm);
 
-const inputAmount = btcToSatoshi(25.00001);
+const inputAmount = btcToSatoshi(25);
 const amountToSpend = inputAmount - 1000n;
 
 const tx = new Transaction()
   .addInput({
     previousTransactionID:
-      '9835ce8f72264b543bf9774fdf7a049c259423232671d8cffe48079f94b32ce0',
+      '7fa9177b7363b6513419e0e29bb15d17a1eb04e164dc52960e3b4da275e0bb55',
     previousTransactionOutputIndex: 0,
   })
   .addOutput({
@@ -44,6 +49,21 @@ const signature = signer.getWitnessV1Signature(
   [inputAmount],
 );
 
-tx.setInputWitness(0, [signature]);
+const scriptInput = encodeScript('OP_3');
+const script = encodeScript(scripts[2]!);
+const pathToScript = getTaprootPath(tr.merkleTree, script.buffer)!;
+console.log(scriptInput.buffer);
+
+const controlBlock = Buffer.concat([
+  TAPROOT_LEAF_VERSION,
+  from.SECKey.subarray(1),
+  ...pathToScript,
+]);
+
+console.log(from.SECKey.length);
+
+// Don't use script even with constant OP_CODES (OP_3 etc.)
+// supports only values in hex
+tx.setInputWitness(0, [Buffer.from([0x03]), script.buffer, controlBlock]);
 
 console.log(tx.serialize().toString('hex'));

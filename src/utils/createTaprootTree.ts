@@ -8,7 +8,7 @@ export type Node = {
   leafScript: Buffer | null;
 };
 
-const TAPROOT_LEAF_VERSION = Buffer.from([0xc0]);
+export const TAPROOT_LEAF_VERSION = Buffer.from([0xc0]);
 
 const hashBranch = (a: Buffer, b: Buffer): Buffer => {
   if (a.compare(b) === -1)

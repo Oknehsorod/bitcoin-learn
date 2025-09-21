@@ -10,6 +10,8 @@ import {
   getTaprootPath,
   TAPROOT_LEAF_VERSION,
 } from './utils/createTaprootTree';
+import { SignatureHashType } from './types/SignatureHashType';
+import { Buffer } from 'node:buffer';
 
 const from = infoAddress(1n);
 const to = infoAddress(2n);
@@ -18,20 +20,22 @@ const shNew = infoScript(
   `OP_2 ${from.SECKey.toString('hex')} ${to.SECKey.toString('hex')} OP_2 OP_CHECKMULTISIG`,
 );
 
-const scripts = new Array(5)
-  .fill(null)
-  .map((_, idx) => `OP_${idx + 1} OP_EQUAL`);
+const scripts = [
+  `${from.SECKey.subarray(1).toString('hex')} OP_CHECKSIG`,
+  `${to.SECKey.subarray(1).toString('hex')} OP_CHECKSIG`,
+];
+
 const tr = infoTaproot(from.secret, scripts);
 
 const sh = infoScript(shNew.P2WSHPubKey.asm);
 
-const inputAmount = btcToSatoshi(25);
+const inputAmount = btcToSatoshi(12.5);
 const amountToSpend = inputAmount - 1000n;
 
 const tx = new Transaction()
   .addInput({
     previousTransactionID:
-      '7fa9177b7363b6513419e0e29bb15d17a1eb04e164dc52960e3b4da275e0bb55',
+      'a8efb3cbc386baa701bdc106c299685ed2a21fd9d2ae021a2e2d193195e12692',
     previousTransactionOutputIndex: 0,
   })
   .addOutput({
@@ -40,19 +44,22 @@ const tx = new Transaction()
   })
   .setVersion(2);
 
+const script = encodeScript(scripts[0]!);
+
 const signer = new TransactionSigner(tx);
+
+const pathToScript = getTaprootPath(tr.merkleTree, script.buffer)!;
+
+console.log(script.asm.startsWith(from.SECKey.subarray(1).toString('hex')));
 
 const signature = signer.getWitnessV1Signature(
   0,
-  tr.tweakedPrivateKey,
+  from.secret,
   [getP2TRScriptPubKey(tr.P2TR).buffer],
   [inputAmount],
+  SignatureHashType.SIGHASH_ALL,
+  tr.merkleTree.left?.hash,
 );
-
-const scriptInput = encodeScript('OP_3');
-const script = encodeScript(scripts[2]!);
-const pathToScript = getTaprootPath(tr.merkleTree, script.buffer)!;
-console.log(scriptInput.buffer);
 
 const controlBlock = Buffer.concat([
   TAPROOT_LEAF_VERSION,
@@ -60,10 +67,10 @@ const controlBlock = Buffer.concat([
   ...pathToScript,
 ]);
 
-console.log(from.SECKey.length);
+console.log('Signature: ', signature.length);
 
 // Don't use script even with constant OP_CODES (OP_3 etc.)
 // supports only values in hex
-tx.setInputWitness(0, [Buffer.from([0x03]), script.buffer, controlBlock]);
+tx.setInputWitness(0, [signature, script.buffer, controlBlock]);
 
 console.log(tx.serialize().toString('hex'));

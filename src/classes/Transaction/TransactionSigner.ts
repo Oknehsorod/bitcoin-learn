@@ -266,19 +266,23 @@ export class TransactionSigner {
     prevOutputScript: Buffer[],
     amount: bigint[],
     hashType = SignatureHashType.SIGHASH_ALL,
-    merklePath: Buffer[] = [],
-    leafVersion: number = 0xc0,
+    script?: Buffer,
   ) {
     const hashToSign = this.transaction.getSighHashWitnessV1(
       inputIndex,
       prevOutputScript,
       amount,
-      merklePath,
-      leafVersion,
       hashType,
+      script,
     );
 
-    return Transaction.getSchnorrSignature(tweakedSecret, hashToSign, hashType);
+    console.log('schnorr sighash: ', hashToSign.reverse().toString('hex'));
+
+    return Transaction.getSchnorrSignature(
+      tweakedSecret,
+      hashToSign.reverse(),
+      hashType,
+    );
   }
 
   public getTransaction(): Transaction {

@@ -461,9 +461,8 @@ export class Transaction {
     inputIndex: number,
     prevOutputScripts: Buffer[],
     amounts: bigint[],
-    merklePath: Buffer[] = [],
-    leafVersion: number = 0xc0,
     hashType: SignatureHashType = SignatureHashType.SIGHASH_ALL,
+    leafHash?: Buffer,
   ): Buffer {
     const bufWriter = new BufferWriter()
       .writeUInt8(hashType)
@@ -535,7 +534,7 @@ export class Transaction {
       );
     }
 
-    bufWriter.writeUInt8(merklePath.length > 0 ? 0x01 : 0x00);
+    bufWriter.writeUInt8(leafHash ? 0x02 : 0x00);
 
     if (hashType === SignatureHashType.SIGHASH_ANYONECANPAY) {
       bufWriter.append(
@@ -573,6 +572,12 @@ export class Transaction {
           correspondingOutput.scriptPublicKey,
         ]),
       );
+    }
+
+    if (leafHash) {
+      bufWriter.append(leafHash);
+      bufWriter.writeUInt8(0x00);
+      bufWriter.writeUInt32LE(0xffffffff);
     }
 
     return hashTagged(

@@ -21,8 +21,11 @@ function xorBytes(a: Buffer, b: Buffer): Buffer {
   return result;
 }
 
-export const createSchnorrSignature = (secret: bigint, msg: Buffer): Buffer => {
-  const a = randomBytes(32);
+export const createSchnorrSignature = (
+  secret: bigint,
+  msg: Buffer,
+  a = randomBytes(32),
+): Buffer => {
   let d = secret;
   if (d === 0n || d >= N) throw new Error('Invalid secret');
 

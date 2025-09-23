@@ -39,3 +39,19 @@ export const BITCOIN_NETWORK_TO_WITNESS_ADDRESS_PREFIX: Record<
   [BitcoinNetworks.TESTNET]: 'tb',
   [BitcoinNetworks.REGTEST]: 'bcrt',
 };
+
+export const BITCOIN_NETWORK_TO_PRIVATE_HD_KEY: Record<
+  BitcoinNetworks,
+  string
+> = {
+  [BitcoinNetworks.MAINNET]: '0488ADE4',
+  [BitcoinNetworks.TESTNET]: '04358394',
+  [BitcoinNetworks.REGTEST]: '04358394',
+};
+
+export const BITCOIN_NETWORK_TO_PUBLIC_HD_KEY: Record<BitcoinNetworks, string> =
+  {
+    [BitcoinNetworks.MAINNET]: '0488B21E',
+    [BitcoinNetworks.TESTNET]: '043587CF',
+    [BitcoinNetworks.REGTEST]: '043587CF',
+  };
